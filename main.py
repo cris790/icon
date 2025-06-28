@@ -31,12 +31,15 @@ def load_assets():
 ASSETS_DB = load_assets()
 
 def apply_rarity_effects(img, rarity):
-    """Aplica um fundo conforme a raridade do item"""
+    """Aplica um fundo conforme a raridade do item, mantendo proporções e centralizando"""
     rarity_backgrounds = {
         "BLUE": "backgrounds/blue.png",
         "PURPLE": "backgrounds/purple.png",
         "ORANGE": "backgrounds/orange.png",
-        "RED": "backgrounds/red.png"
+        "RED": "backgrounds/red.png",
+        "GREEN": "backgrounds/green.png",
+        "PURPLE_PLUS": "backgrounds/purpleplus.png",
+        "ORANGE_PLUS": "backgrounds/orangeplus.png"
     }
 
     rarity = rarity.upper()
@@ -44,14 +47,35 @@ def apply_rarity_effects(img, rarity):
         return img  # Se for WHITE ou outra não tratada, devolve a imagem original
 
     try:
+        # Carrega o fundo de raridade
         background_path = rarity_backgrounds[rarity]
         if not os.path.exists(background_path):
             print(f"Fundo de raridade '{rarity}' não encontrado em: {background_path}")
             return img
 
         bg = Image.open(background_path).convert("RGBA")
-        bg = bg.resize(img.size)  # Garante que o fundo tenha o mesmo tamanho da imagem
-        result = Image.alpha_composite(bg, img)  # Combina o fundo com o ícone
+
+        # Calcula a proporção para redimensionar o ícone mantendo aspect ratio
+        bg_width, bg_height = bg.size
+        icon_width, icon_height = img.size
+
+        # Calcula o novo tamanho mantendo proporção (90% do espaço disponível)
+        ratio = min(bg_width / icon_width, bg_height / icon_height) * 0.9
+        new_size = (int(icon_width * ratio), int(icon_height * ratio))
+
+        # Redimensiona o ícone com alta qualidade
+        resized_icon = img.resize(new_size, Image.LANCZOS)
+
+        # Calcula a posição para centralizar
+        position = (
+            (bg_width - new_size[0]) // 2,
+            (bg_height - new_size[1]) // 2
+        )
+
+        # Cria uma nova imagem com o fundo e cola o ícone redimensionado no centro
+        result = bg.copy()
+        result.alpha_composite(resized_icon, position)
+
         return result
 
     except Exception as e:
@@ -96,21 +120,21 @@ def get_icon():
         # Aplica o fundo de raridade
         img = apply_rarity_effects(img, rarity)
 
-        # Adiciona a marca d'água
+        # Adiciona a marca d'água (opcional)
         draw = ImageDraw.Draw(img)
         try:
             font = ImageFont.truetype("arial.ttf", 20)
         except:
             font = ImageFont.load_default()
 
-        text = "Tanhung11231"
+        text = ""
         bbox = draw.textbbox((0, 0), text, font=font)
         x = (img.width - (bbox[2] - bbox[0])) // 2
         y = (img.height - (bbox[3] - bbox[1])) // 2
 
-        # Sombra
+        # Sombra (opcional)
         draw.text((x+2, y+2), text, font=font, fill=(0, 0, 0, 128))
-        # Texto principal
+        # Texto principal (opcional)
         draw.text((x, y), text, font=font, fill=(255, 255, 255, 255))
 
         img_bytes = BytesIO()
